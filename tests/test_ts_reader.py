@@ -1,60 +1,136 @@
+import json
 import sys
-from pathlib import Path
 import types
 import numpy as np
+import pytest
+from pathlib import Path
 
-# Stub minimal torch module to satisfy imports in ts_reader
-torch_stub = types.SimpleNamespace()
-utils_stub = types.SimpleNamespace()
-data_stub = types.SimpleNamespace(Dataset=object)
-utils_stub.data = data_stub
-torch_stub.utils = utils_stub
-sys.modules['torch'] = torch_stub
-sys.modules['torch.utils'] = utils_stub
-sys.modules['torch.utils.data'] = data_stub
+# Provide a minimal torch stub so ts_reader can be imported without installing
+# the real torch package.
+torch_stub = types.ModuleType("torch")
+torch_stub.utils = types.SimpleNamespace(data=types.SimpleNamespace(Dataset=object))
+torch_stub.Tensor = np.ndarray
+sys.modules.setdefault("torch", torch_stub)
+sys.modules.setdefault("torch.utils", torch_stub.utils)
+sys.modules.setdefault("torch.utils.data", torch_stub.utils.data)
 
-# Stub convert module to avoid pandas dependency during import
-convert_stub = types.ModuleType('src.dataloader.convert')
-def stub_read_mm(*args, **kwargs):
-    raise RuntimeError('stub')
-convert_stub.read_mm = stub_read_mm
-sys.modules['src.dataloader.convert'] = convert_stub
+# Ensure project root is on the path so ``src`` can be imported
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
-import src.dataloader.ts_reader as ts_reader
+from src.dataloader.ts_reader import collect_ts_flat_labels, slice_data
 
 
-def fake_read_mm(data_dir, name):
-    if name == 'flat':
-        data = np.zeros((4, 2), dtype=np.float32)
-        info = {'train_len': 2, 'val_len': 1, 'test_len': 1, 'total': 4, 'shape': (4, 2), 'columns': ['f0', 'f1']}
-    elif name == 'ts':
-        data = np.zeros((4, 1, 1), dtype=np.float32)
-        info = {'train_len': 2, 'val_len': 1, 'test_len': 1, 'total': 4, 'shape': (4, 1, 1), 'columns': ['t0']}
-    elif name == 'diagnoses':
-        data = np.arange(8, dtype=np.float32).reshape(4, 2)
-        info = {'train_len': 1, 'val_len': 1, 'test_len': 2, 'total': 4, 'shape': (4, 2), 'columns': ['d0', 'd1']}
-    elif name == 'labels':
-        data = np.zeros((4, 5), dtype=np.float32)
-        info = {
-            'train_len': 2,
-            'val_len': 1,
-            'test_len': 1,
-            'total': 4,
-            'shape': (4, 5),
-            'columns': ['c0', 'ihm', 'c2', 'los', 'c4'],
-        }
-    else:
-        raise ValueError(name)
-    return data, info
+@pytest.fixture
+def dummy_mmap(tmp_path):
+    data_dir = tmp_path / "data"
+    data_dir.mkdir()
+
+    N = 6
+    # ts
+    ts_shape = (N, 2, 3)
+    ts_data = np.arange(np.prod(ts_shape), dtype=np.float32).reshape(ts_shape)
+    ts_mm = np.memmap(data_dir / "ts.dat", dtype=np.float32, mode="w+", shape=ts_shape)
+    ts_mm[:] = ts_data
+    ts_mm.flush()
+    ts_info = {
+        "name": "ts",
+        "shape": list(ts_shape),
+        "total": N,
+        "train_len": 2,
+        "val_len": 2,
+        "test_len": 2,
+        "columns": ["c0", "c1", "c2"],
+    }
+    (data_dir / "ts_info.json").write_text(json.dumps(ts_info))
+
+    # flat
+    flat_shape = (N, 2)
+    flat_data = np.arange(np.prod(flat_shape), dtype=np.float32).reshape(flat_shape)
+    flat_mm = np.memmap(data_dir / "flat.dat", dtype=np.float32, mode="w+", shape=flat_shape)
+    flat_mm[:] = flat_data
+    flat_mm.flush()
+    flat_info = {
+        "name": "flat",
+        "shape": list(flat_shape),
+        "total": N,
+        "train_len": 2,
+        "val_len": 2,
+        "test_len": 2,
+        "columns": ["f0", "f1"],
+    }
+    (data_dir / "flat_info.json").write_text(json.dumps(flat_info))
+
+    # diagnoses
+    diag_shape = (N, 3)
+    diag_data = np.arange(np.prod(diag_shape), dtype=np.float32).reshape(diag_shape)
+    diag_mm = np.memmap(data_dir / "diagnoses.dat", dtype=np.float32, mode="w+", shape=diag_shape)
+    diag_mm[:] = diag_data
+    diag_mm.flush()
+    diag_info = {
+        "name": "diagnoses",
+        "shape": list(diag_shape),
+        "total": N,
+        "train_len": 2,
+        "val_len": 2,
+        "test_len": 2,
+        "columns": ["d0", "d1", "d2"],
+    }
+    (data_dir / "diagnoses_info.json").write_text(json.dumps(diag_info))
+
+    # labels
+    label_shape = (N, 5)
+    label_data = np.arange(np.prod(label_shape), dtype=np.float32).reshape(label_shape)
+    label_mm = np.memmap(data_dir / "labels.dat", dtype=np.float32, mode="w+", shape=label_shape)
+    label_mm[:] = label_data
+    label_mm.flush()
+    label_info = {
+        "name": "labels",
+        "shape": list(label_shape),
+        "total": N,
+        "train_len": 2,
+        "val_len": 2,
+        "test_len": 2,
+        "columns": ["l0", "ihm", "l2", "los", "l4"],
+    }
+    (data_dir / "labels_info.json").write_text(json.dumps(label_info))
+
+    return data_dir, diag_info
 
 
-def test_diagnoses_slice(monkeypatch):
-    monkeypatch.setattr(ts_reader, 'read_mm', fake_read_mm)
-    expected = {'train': 1, 'val': 1, 'test': 2}
-    for split, exp_len in expected.items():
-        seq, flat, labels, info, N, train_n, val_n = ts_reader.collect_ts_flat_labels(
-            'dummy', True, 'ihm', True, split=split, split_flat_and_diag=True
-        )
-        diag = flat[1]
-        assert diag.shape[0] == exp_len
+def test_slice_data(dummy_mmap):
+    data_dir, diag_info = dummy_mmap
+    diag_mm = np.memmap(data_dir / "diagnoses.dat", dtype=np.float32, shape=tuple(diag_info["shape"]))
+
+    train = slice_data(diag_mm, diag_info, "train")
+    val = slice_data(diag_mm, diag_info, "val")
+    test = slice_data(diag_mm, diag_info, "test")
+
+    assert train.shape == (diag_info["train_len"], diag_info["shape"][1])
+    assert val.shape == (diag_info["val_len"], diag_info["shape"][1])
+    assert test.shape == (diag_info["test_len"], diag_info["shape"][1])
+    np.testing.assert_array_equal(train, diag_mm[:2])
+    np.testing.assert_array_equal(val, diag_mm[2:4])
+    np.testing.assert_array_equal(test, diag_mm[4:6])
+
+
+def test_collect_ts_flat_labels(dummy_mmap):
+    data_dir, diag_info = dummy_mmap
+    seq, (flat, diag), labels, info, N, train_n, val_n = collect_ts_flat_labels(
+        data_dir,
+        ts_mask=True,
+        task="ihm",
+        add_diag=True,
+        split="val",
+        debug=0,
+        split_flat_and_diag=True,
+    )
+
+    assert seq.shape == (diag_info["val_len"], 2, 3)
+    assert flat.shape == (diag_info["val_len"], 2)
+    assert diag.shape == (diag_info["val_len"], 3)
+    assert labels.shape == (diag_info["val_len"],)
+
+    diag_mm = np.memmap(data_dir / "diagnoses.dat", dtype=np.float32, shape=tuple(diag_info["shape"]))
+    expected_diag = diag_mm[diag_info["train_len"] : diag_info["train_len"] + diag_info["val_len"]]
+    np.testing.assert_array_equal(diag, expected_diag)
