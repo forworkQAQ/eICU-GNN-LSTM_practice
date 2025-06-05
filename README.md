@@ -183,3 +183,12 @@ The following runs a hyperparameter search.
 ```
 python3 -m src.hyperparameters.lstm_search --bilstm --ts_mask --add_flat --class_weights --num_workers 0 --add_diag
 ```
+
+## Running Tests
+To run the unit tests install the requirements and execute `pytest`:
+
+```bash
+pip install -r requirements.txt
+pytest
+```
+
