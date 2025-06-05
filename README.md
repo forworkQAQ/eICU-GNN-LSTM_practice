@@ -1,3 +1,28 @@
+## Quick Start with ChatGPT 4.1
+
+The commands below assume basic familiarity with Python. If you are completely new to running code, you can ask ChatGPT 4.1 for help at every step. ChatGPT can explain what each command does or offer troubleshooting tips when you encounter errors.
+
+1. **Clone this repository and navigate to it**
+   ```bash
+   git clone https://github.com/<your-username>/eICU-GNN-LSTM_practice.git
+   cd eICU-GNN-LSTM_practice
+   ```
+2. **Create a Python environment** (e.g. Python 3.8) and install the dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+3. **Prepare the eICU dataset** following the steps in [Pre-Processing Instructions](#pre-processing-instructions).
+4. **Convert the processed data** for fast loading:
+   ```bash
+   python3 -m src.dataloader.convert
+   ```
+5. **Train a model** with the default settings:
+   ```bash
+   python3 -m train_ns_lstmgnn --bilstm --ts_mask --add_flat --class_weights --gnn_name gat --add_diag --read_best
+   ```
+   You can modify the command to run other models described below.
+6. Whenever you face an unfamiliar error or want to learn more about the code, consult ChatGPT 4.1 with the error message or your question.
+
 Predicting Patient Outcomes with Graph Representation Learning
 ===============================
 
@@ -166,3 +191,4 @@ To run the unit tests install the requirements and execute `pytest`:
 pip install -r requirements.txt
 pytest
 ```
+

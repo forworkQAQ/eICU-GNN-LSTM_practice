@@ -134,4 +134,3 @@ def test_collect_ts_flat_labels(dummy_mmap):
     diag_mm = np.memmap(data_dir / "diagnoses.dat", dtype=np.float32, shape=tuple(diag_info["shape"]))
     expected_diag = diag_mm[diag_info["train_len"] : diag_info["train_len"] + diag_info["val_len"]]
     np.testing.assert_array_equal(diag, expected_diag)
-

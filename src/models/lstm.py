@@ -77,7 +77,7 @@ class DynamicLSTM(nn.Module):
         init hidden state for LSTM 
         note to self:
         - this function seems unnecessary since nn.LSTM defaults to initialize with zeroes anyway.
-        - weight.new creates a Varialbe with the same data type as weight (i.e. nth actually to do with weight)
+        - weight.new creates a Variable with the same data type as weight (i.e., nothing actually to do with weight)
         - init_hidden doesn't initialize the weights, rather, it creates new initial states for new sequences (t=0)
         """
         weight = next(self.parameters()).data
