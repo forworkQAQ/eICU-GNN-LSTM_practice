@@ -44,7 +44,7 @@ def collect_ts_flat_labels(data_dir, ts_mask, task, add_diag, split=None,
 
     if add_diag:
         diag_data, diag_info = read_mm(data_dir, 'diagnoses')
-        diag = slice_data(diag_data, flat_info, split)
+        diag = slice_data(diag_data, diag_info, split)
         if split_flat_and_diag:
             flat = (flat, diag)
         else:
