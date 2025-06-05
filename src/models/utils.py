@@ -8,8 +8,10 @@ import torch.nn as nn
 
 def get_checkpoint_path(model_dir):
     """Return path of latest checkpoint found in the model directory."""
-    chkpt =  str(list(Path(model_dir).glob('checkpoints/*'))[-1])
-    return chkpt
+    checkpoint_dir = Path(model_dir) / 'checkpoints'
+    # Choose the checkpoint with the newest modification timestamp
+    chkpt = max(checkpoint_dir.glob('*'), key=os.path.getmtime)
+    return str(chkpt)
 
 
 def define_loss_fn(config):
