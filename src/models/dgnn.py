@@ -1,5 +1,5 @@
 """
-Defining Dyanmics LSTM-GNN models
+Defining Dynamic LSTM-GNN models
 """
 import torch
 import torch.nn as nn
