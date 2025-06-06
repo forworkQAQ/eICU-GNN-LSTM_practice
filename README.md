@@ -79,10 +79,18 @@ Recent work on predicting patient outcomes in the Intensive Care Unit (ICU) has 
     \q
     ```
     
-5) Then run the pre-processing scripts in your terminal. This will need to run overnight:
+5) Run the pre-processing scripts. By default this command processes only a
+   small subset of the data so it finishes quickly:
 
     ```
     python3 -m eICU_preprocessing.run_all_preprocessing
+    ```
+
+   Add the `--full` flag to process the entire dataset, which may take several
+   hours:
+
+    ```
+    python3 -m eICU_preprocessing.run_all_preprocessing --full
     ```
     
 ### Graph Construction
