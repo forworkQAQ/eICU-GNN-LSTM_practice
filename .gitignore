@@ -11,7 +11,12 @@ notebook
 __pycache__/
 *.py[cod]
 *$py.class
-
+physionet.org/
+venv38/
+*.tar.gz
+*.zip
+*.log
+__pycache__/
 # C extensions
 *.so
 
