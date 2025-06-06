@@ -79,15 +79,19 @@ Recent work on predicting patient outcomes in the Intensive Care Unit (ICU) has 
     \q
     ```
     
-5) Run the pre-processing scripts. The repository now defaults to a small
-   **test mode** so this command finishes quickly:
+5) Run the pre-processing scripts. By default this command processes only a
+   small subset of the data so it finishes quickly:
 
     ```
     python3 -m eICU_preprocessing.run_all_preprocessing
     ```
 
-   Set the test flags to `False` in `run_all_preprocessing.py` when you want to
-   process the entire dataset, which may take several hours.
+   Add the `--full` flag to process the entire dataset, which may take several
+   hours:
+
+    ```
+    python3 -m eICU_preprocessing.run_all_preprocessing --full
+    ```
     
 ### Graph Construction
 
